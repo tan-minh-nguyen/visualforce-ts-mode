@@ -17,3 +17,4 @@
 
 # Package archives
 *.tar
+/.agent-shell/

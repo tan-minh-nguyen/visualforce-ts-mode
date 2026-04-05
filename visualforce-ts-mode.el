@@ -35,20 +35,12 @@
 ;; - Intelligent indentation
 ;; - Imenu navigation for elements, expressions, and functions
 ;;
-;; Extensions (optional):
-;; - visualforce-eglot: Eglot LSP configuration
-;; - visualforce-lsp-bridge: lsp-bridge configuration
+;; LSP support (eglot) is built-in - configure with `visualforce-ts-mode-lsp-path'
 
 ;;; Code:
 
 (require 'treesit)
 (require 'sgml-mode)
-
-;; Optional extensions
-(when (require 'visualforce-eglot nil :noerror)
-  (message "visualforce-ts-mode: Eglot support loaded"))
-(when (require 'lsp-bridge nil :noerror)
-  (require 'visualforce-lsp-bridge nil :noerror))
 
 ;;; Customization
 
@@ -57,10 +49,21 @@
   :group 'languages
   :prefix "visualforce-")
 
-(defcustom visualforce-ts-mode--indent-offset 4
+(defcustom visualforce-ts-mode-indent-offset 4
   "Visualforce indent offset."
   :group 'visualforce
   :type 'integer)
+
+(defcustom visualforce-ts-mode-lsp-path "visualforce-lsp"
+  "Path to the Visualforce LSP binary."
+  :type 'string
+  :group 'visualforce)
+
+(defcustom visualforce-ts-mode-eglot-config
+  '(:initializationOptions (:embeddedLanguages (:css t :javascript t)))
+  "Eglot initialization options for Visualforce LSP."
+  :type 'plist
+  :group 'visualforce)
 
 ;;; Variables
 
@@ -295,21 +298,21 @@
 (defvar visualforce-ts-mode--css-indent-rules
   `(css
     ((parent-is "rule_set") column-0 0)
-    ((node-is "comment") parent visualforce-ts-mode--indent-offset)
+    ((node-is "comment") parent visualforce-ts-mode-indent-offset)
     ((node-is "block") prev-sibling 0)
     ((node-is "}") parent 0)
-    ((parent-is "block") parent-bol visualforce-ts-mode--indent-offset)
+    ((parent-is "block") parent-bol visualforce-ts-mode-indent-offset)
     (no-node parent 0))
   "Indent rules for css on visualforce page.")
 
 (defvar visualforce-ts-mode--js-indent-rules
   `(javascript
-    ((parent-is ,(regexp-opt '("variable_declaration" "function_declaration"))) column-0 visualforce-ts-mode--indent-offset)
+    ((parent-is ,(regexp-opt '("variable_declaration" "function_declaration"))) column-0 visualforce-ts-mode-indent-offset)
     ((node-is "statement_block") prev-sibling 2)
-    ((parent-is "statement_block") parent-bol visualforce-ts-mode--indent-offset)
-    ((parent-is "object") parent visualforce-ts-mode--indent-offset)
-    ((field-name "object") parent visualforce-ts-mode--indent-offset)
-    ((node-is ,(regexp-opt '("property_identifier" "return_statement")) parent-bol visualforce-ts-mode--indent-offset))
+    ((parent-is "statement_block") parent-bol visualforce-ts-mode-indent-offset)
+    ((parent-is "object") parent visualforce-ts-mode-indent-offset)
+    ((field-name "object") parent visualforce-ts-mode-indent-offset)
+    ((node-is ,(regexp-opt '("property_identifier" "return_statement")) parent-bol visualforce-ts-mode-indent-offset))
     ((node-is "}") parent-bol 0)
     (no-node parent 0))
   "Indent rules for javascript on visualforce page.")
@@ -317,8 +320,8 @@
 (defvar visualforce-ts-mode--html-indent-rules
   `(html
     ((parent-is "document") column-0 0)
-    ((node-is "comment") parent visualforce-ts-mode--indent-offset)
-    ((node-is ,(regexp-opt '("element" "self_closing_tag"))) parent visualforce-ts-mode--indent-offset)
+    ((node-is "comment") parent visualforce-ts-mode-indent-offset)
+    ((node-is ,(regexp-opt '("element" "self_closing_tag"))) parent visualforce-ts-mode-indent-offset)
     ((node-is "end_tag") parent 0)
     ((node-is "/") parent 0)
     ((node-is "text") parent 0)
@@ -609,6 +612,14 @@
 
 ;;;###autoload
 (add-to-list 'auto-mode-alist '("\\.\\(page\\|component\\)\\'" . visualforce-ts-mode))
+
+;;; Eglot Integration
+
+(with-eval-after-load 'eglot
+  (add-to-list 'eglot-server-programs
+               `(visualforce-ts-mode . (,visualforce-ts-mode-lsp-path
+                                        "--stdio"
+                                        ,@visualforce-ts-mode-eglot-config))))
 
 (provide 'visualforce-ts-mode)
 ;;; visualforce-ts-mode.el ends here
