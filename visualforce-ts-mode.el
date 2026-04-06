@@ -23,7 +23,7 @@
   :group 'visualforce
   :type 'integer)
 
-(defcustom visualforce-ts-mode-lsp-path "visualforce-lsp"
+(defcustom visualforce-ts-mode-lsp-bin "visualforce-lsp"
   "Path to the Visualforce LSP binary."
   :type 'string
   :group 'visualforce)
@@ -579,16 +579,17 @@
 
 ;;; Auto Mode
 
-;;;###autoload
 (add-to-list 'auto-mode-alist '("\\.\\(page\\|component\\)\\'" . visualforce-ts-mode))
 
 ;;; Eglot Integration
 
 (with-eval-after-load 'eglot
   (add-to-list 'eglot-server-programs
-               `(visualforce-ts-mode . (,visualforce-ts-mode-lsp-path
-                                        "--stdio"
-                                        ,@visualforce-ts-mode-eglot-config))))
+               (cons 'visualforce-ts-mode
+                     (lambda (&rest _)
+                       `(,visualforce-ts-mode-lsp-bin
+                         "--stdio"
+                         ,@visualforce-ts-mode-eglot-config)))))
 
 (provide 'visualforce-ts-mode)
 ;;; visualforce-ts-mode.el ends here
